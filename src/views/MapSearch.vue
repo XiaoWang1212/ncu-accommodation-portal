@@ -9,37 +9,58 @@
       <div class="filters">
         <h3>快速篩選</h3>
         <div class="filter-chips">
-          <div class="chip active">全部</div>
-          <div class="chip">5000以下</div>
-          <div class="chip">5000-8000</div>
-          <div class="chip">8000以上</div>
-          <div class="chip">限學生</div>
-          <div class="chip">可養寵物</div>
+          <div class="chip" 
+               :class="{ active: currentFilter === 'all' }"
+               @click="filterByPrice('all')">全部</div>
+          <div class="chip" 
+               :class="{ active: currentFilter === '5000以下' }"
+               @click="filterByPrice('5000以下')">5000以下</div>
+          <div class="chip" 
+               :class="{ active: currentFilter === '5000-8000' }"
+               @click="filterByPrice('5000-8000')">5000-8000</div>
+          <div class="chip" 
+               :class="{ active: currentFilter === '8000以上' }"
+               @click="filterByPrice('8000以上')">8000以上</div>
         </div>
       </div>
       
       <div class="results">
         <h3>搜尋結果 <span class="result-count">(12)</span></h3>
         <div class="result-list">
-          <div 
-            v-for="property in searchResults" 
-            :key="property.id" 
-            class="result-item"
-            :class="{ active: selectedProperty === property.id }"
-            @click="selectProperty(property.id)"
-          >
-            <img :src="property.image" alt="房屋照片" class="property-thumbnail" />
+          <div class="result-item"
+               v-for="property in filteredProperties" 
+               :key="property.編碼"
+               :class="{ active: selectedProperty === property.編碼 }"
+               @click="selectProperty(property.編碼)">
             <div class="item-details">
-              <h4>{{ property.title }}</h4>
-              <div class="price">NT$ {{ property.price.toLocaleString() }}/月</div>
-              <div class="location">
-                <i class="location-icon">📍</i> {{ property.location }}
+              <div class="details-left">
+                <div class="image-container">
+                  <!-- 預設圖片容器 -->
+                  <div v-if="!imageLoadStatus[property.編碼]" class="default-image">
+                  <i class="no-image-icon">🏠</i>
+                  </div>
+                  <!-- 實際圖片 -->
+                  <img 
+                  :src="getImageUrl(property)"
+                  :alt="property.標題"
+                  class="property-thumbnail"
+                  :class="{ 'image-loaded': imageLoadStatus[property.編碼] }"
+                  @load="handleImageLoad(property.編碼)"
+                  @error="handleImageError($event, property.編碼)"
+                  loading="lazy"
+                  />
+                </div>
               </div>
-              <div class="amenities">
-                <span>{{ property.type }}</span>
-                <span>{{ property.size }}坪</span>
-                <span v-if="property.bedrooms > 0">{{ property.bedrooms }}房</span>
-                <span v-if="property.bathrooms > 0">{{ property.bathrooms }}衛</span>
+              <div class="details-right">
+                <h4>{{ property.標題 }}</h4>
+                <div class="price">{{ property.房租 }}</div>
+                <div class="location">
+                  <i class="location-icon">📍</i> {{ property.地址 }}
+                </div>
+                <div class="amenities">
+                  <span>{{ property.出租房數.套房.坪數 }}</span>
+                  <span v-if="property.出租房數.套房.空房">空房: {{ property.出租房數.套房.空房 }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -54,88 +75,117 @@
 </template>
 
 <script>
-/* Add this at the top of your script section */
-
+import { ref } from 'vue'
+import propertyData from '../data.json'
 
 export default {
   name: "MapSearch",
+  setup() {
+    const imageLoadStatus = ref({});
+    
+    const getDefaultImage = () => {
+      return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="1" height="1" viewBox="0 0 1 1"%3E%3Crect width="1" height="1" fill="%23f5f5f5"/%3E%3C/svg%3E';
+    };
+
+    const handleImageLoad = (propertyId) => {
+      imageLoadStatus.value[propertyId] = true;
+    };
+
+    const handleImageError = (event, propertyId) => {
+      console.error(`圖片載入失敗: ${propertyId}`);
+      imageLoadStatus.value[propertyId] = false;
+      event.target.src = getDefaultImage();
+    };
+
+    return {
+      imageLoadStatus,
+      handleImageLoad,
+      handleImageError,
+      getDefaultImage
+    }
+  },
   data() {
     return {
       searchText: "",
       selectedProperty: null,
-      searchResults: [
-        {
-          id: 1,
-          title: "中央大學附近精美套房",
-          location: "中壢區中大路300號附近",
-          price: 7500,
-          type: "套房",
-          bedrooms: 1,
-          bathrooms: 1,
-          size: 8,
-          image: "https://picsum.photos/id/1026/300/150",
-          lat: 24.9683,
-          lng: 121.1945
-        },
-        {
-          id: 2,
-          title: "近中壢夜市雅房",
-          location: "中壢區五權里",
-          price: 4800,
-          type: "雅房",
-          bedrooms: 0,
-          bathrooms: 1,
-          size: 5,
-          image: "https://picsum.photos/id/1027/300/150",
-          lat: 24.9685,
-          lng: 121.1950
-        },
-        {
-          id: 3,
-          title: "中央大學旁整層出租",
-          location: "中壢區中大路350號附近",
-          price: 15000,
-          type: "整層住家",
-          bedrooms: 3,
-          bathrooms: 2,
-          size: 25,
-          image: "https://picsum.photos/id/1028/300/150",
-          lat: 24.9687,
-          lng: 121.1948
-        },
-        {
-          id: 4,
-          title: "全新裝潢獨立套房",
-          location: "中壢區五權二街",
-          price: 8800,
-          type: "獨立套房",
-          bedrooms: 1,
-          bathrooms: 1,
-          size: 12,
-          image: "https://picsum.photos/id/1029/300/150",
-          lat: 24.9689,
-          lng: 121.1952
-        }
-      ],
-      mapMarkers: [],
-      map: null,
+      properties: [], // 改為儲存房屋資料
       markers: [],
+      map: null,
       isMapLoaded: false,
       mapLoadError: false,
       selectedMarker: null,
-      API_KEY: 'AIzaSyCqNQRo2JFh8XSiBN0pZzemAmUh3WR910s', // 替換成你的 API Key
-      shouldShowBelow: false
-    };
+      API_KEY: 'AIzaSyCqNQRo2JFh8XSiBN0pZzemAmUh3WR910s',
+      currentFilter: 'all',
+      favorites: []
+    }
   },
+
+  created() {
+    // 在組件創建時載入資料
+    this.loadPropertyData()
+  },
+
   computed: {
     selectedPropertyDetails() {
       return this.searchResults.find(p => p.id === this.selectedProperty) || {};
+    },
+    filteredProperties() {
+      let filtered = this.properties;
+      
+      // 文字搜尋
+      if (this.searchText) {
+        const searchLower = this.searchText.toLowerCase();
+        filtered = filtered.filter(p => 
+          p.標題.toLowerCase().includes(searchLower) ||
+          p.地址.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      // 價格過濾
+      if (this.currentFilter !== 'all') {
+        filtered = filtered.filter(p => {
+          const price = this.extractPrice(p.房租);
+          switch(this.currentFilter) {
+            case '5000以下':
+              return price <= 5000;
+            case '5000-8000':
+              return price > 5000 && price <= 8000;
+            case '8000以上':
+              return price > 8000;
+            default:
+              return true;
+          }
+        });
+      }
+      
+      return filtered;
     }
   },
+
   mounted() {
     this.initGoogleMaps();
   },
+
   methods: {
+    loadPropertyData() {
+      try {
+        // 確保 propertyData 是陣列
+        if (Array.isArray(propertyData)) {
+          this.properties = propertyData;
+        } else {
+          console.error('載入的資料格式不正確');
+          this.properties = [];
+        }
+        
+        if (this.map && this.isMapLoaded) {
+          this.updateMapMarkers();
+        }
+      } catch (error) {
+        console.error('載入物件資料失敗:', error);
+        this.properties = [];
+      }
+    },
+
     selectProperty(id) {
       this.selectedProperty = id;
     },
@@ -181,7 +231,6 @@ export default {
     createMap() {
       const ncuLocation = { lat: 24.9683, lng: 121.1945 };
       
-      // Add type check for Google Maps
       if (window.google && window.google.maps) {
         this.map = new window.google.maps.Map(document.getElementById('google-map'), {
           center: ncuLocation,
@@ -191,19 +240,9 @@ export default {
           fullscreenControl: false,
         });
 
-        this.searchResults.forEach(property => {
-          const marker = new window.google.maps.Marker({
-            position: { lat: property.lat, lng: property.lng },
-            map: this.map,
-            title: property.title,
-          });
-
-          marker.addListener('click', () => {
-            this.selectProperty(property.id);
-          });
-
-          this.markers.push(marker);
-        });
+        // 確保在地圖載入後再新增標記
+        this.isMapLoaded = true;
+        this.updateMapMarkers();
       } else {
         this.createFallbackMap();
       }
@@ -250,6 +289,112 @@ export default {
     },
     viewDetails(markerId) {
       console.log(`Viewing details for marker ID: ${markerId}`);
+    },
+    updateMapMarkers() {
+      // 清除現有標記
+      if (this.markers && this.markers.length) {
+        this.markers.forEach(marker => marker.setMap(null));
+        this.markers = [];
+      }
+
+      if (!this.map || !this.properties || !window.google) return;
+
+      // 建立地理編碼服務
+      const geocoder = new window.google.maps.Geocoder();
+
+      // 為每個物件建立標記
+      this.properties.forEach(property => {
+        // 使用地址進行地理編碼
+        geocoder.geocode({ address: property.地址 }, (results, status) => {
+          if (status === 'OK' && results[0]) {
+            const position = results[0].geometry.location;
+            
+            // 在 marker 建立時保存物件 ID
+            const marker = new window.google.maps.Marker({
+              position: position,
+              map: this.map,
+              title: property.標題,
+              animation: window.google.maps.Animation.DROP
+            });
+            marker.propertyId = property.編碼; // 新增這行
+
+            // 建立資訊視窗內容
+            const content = `
+              <div class="info-window-content">
+                <h3>${property.標題}</h3>
+                <p>${property.房租}</p>
+                <p>${property.地址}</p>
+                <p>聯絡方式: ${property.聯絡資訊}</p>
+              </div>
+            `;
+
+            // 建立資訊視窗
+            const infoWindow = new window.google.maps.InfoWindow({
+              content: content
+            });
+
+            // 添加點擊事件
+            marker.addListener('click', () => {
+              // 關閉其他開啟的資訊視窗
+              this.markers.forEach(m => m.infoWindow?.close());
+              
+              infoWindow.open(this.map, marker);
+              this.selectProperty(property.編碼);
+              this.map.panTo(position);
+            });
+
+            // 儲存標記和資訊視窗的引用
+            marker.infoWindow = infoWindow;
+            this.markers.push(marker);
+          } else {
+            console.warn(`地理編碼失敗: ${property.地址}`, status);
+          }
+        });
+      });
+    },
+    filterByPrice(range) {
+      this.currentFilter = range;
+      // 不需要額外過濾，因為 filteredProperties computed 屬性會處理
+    },
+    extractPrice(priceString) {
+      // 從價格字串中提取數字
+      const matches = priceString.match(/\d+/g);
+      if (matches && matches.length > 0) {
+        // 如果是範圍價格，取第一個數字
+        return parseInt(matches[0]);
+      }
+      return 0;
+    },
+    getImageUrl(property) {
+      if (!property || !Array.isArray(property.房屋照片) || property.房屋照片.length === 0) {
+        return this.getDefaultImage();
+      }
+
+      const findValidImage = (index) => {
+        if (index >= property.房屋照片.length) {
+          return this.getDefaultImage();
+        }
+
+        try {
+          const imagePath = property.房屋照片[index];
+          const image = require(`@/assets/images-data/${imagePath}`);
+
+          // 檢查是否成功載入圖片
+          if (image && typeof image === 'string') {
+            // 檢查是否為無效的圖片（可以根據實際情況調整條件）
+            if (image.includes('-1.49632716') || image.includes('data:image/svg+xml')) {
+              return findValidImage(index + 1);
+            }
+            return image;
+          }
+          return findValidImage(index + 1);
+        } catch (error) {
+          console.error(`圖片載入錯誤 (${index}):`, error);
+          return findValidImage(index + 1);
+        }
+      };
+
+      return findValidImage(0);
     }
   },
   beforeUnmount() {
@@ -264,21 +409,64 @@ export default {
       if (this.mapLoadError || !this.map) return;
 
       this.markers.forEach(marker => {
-        const property = this.searchResults.find(p => 
-          p.lat === marker.getPosition().lat() && 
-          p.lng === marker.getPosition().lng()
-        );
-        if (property && property.id === newValue) {
+        if (marker.propertyId === newValue) {
           marker.setAnimation(window.google.maps.Animation.BOUNCE);
           this.map.panTo(marker.getPosition());
         } else {
           marker.setAnimation(null);
         }
       });
+    },
+    searchResults: {
+      handler(newResults) {
+        console.log('Search results updated:', newResults); // 除錯用
+        if (this.map && this.isMapLoaded && newResults.length > 0) {
+          this.updateMapMarkers();
+        }
+      },
+      deep: true
     }
   }
 };
 </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 <style scoped>
 .map-search {
@@ -382,60 +570,99 @@ export default {
 }
 
 .result-item {
-  display: flex;
   background: white;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s, box-shadow 0.2s;
   cursor: pointer;
+  height: 120px;
 }
 
-.result-item:hover,
-.result-item.active {
+.result-item:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.result-item.active {
-  border: 2px solid #007bff;
+.item-details {
+  display: flex;
+  height: 100%;
+}
+
+.details-left {
+  width: 120px;
+  flex-shrink: 0;
+}
+
+.details-right {
+  flex: 1;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.image-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-color: #f5f5f5;
+  overflow: hidden;
 }
 
 .property-thumbnail {
-  width: 100px;
-  height: 100px;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
-.item-details {
-  padding: 10px;
-  flex: 1;
+.property-thumbnail.image-loaded {
+  opacity: 1;
 }
 
-.item-details h4 {
-  margin: 0 0 5px;
-  font-size: 0.95rem;
+.default-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f5f5;
+  z-index: 1;
+}
+
+.no-image-icon {
+  font-size: 2rem;
+  color: #ccc;
+}
+
+h4 {
+  margin: 0 0 4px;
+  font-size: 0.9rem;
   color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .price {
   font-weight: bold;
   color: #007bff;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
   font-size: 0.9rem;
 }
 
 .location {
   color: #666;
   font-size: 0.8rem;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
   display: flex;
   align-items: center;
-}
-
-.location-icon {
-  margin-right: 3px;
-  font-size: 0.8rem;
 }
 
 .amenities {
