@@ -5,21 +5,20 @@
       <div class="overlay"></div>
       <div class="hero-content">
         <h1>中央大學校外外宿網</h1>
-        <p>整合式的校外住宿資訊平台，讓你的找房體驗更輕鬆</p>
-        <div class="search-container" style="border-radius: 8px;">
-          <div class="search-input">
-            <i class="search-icon"></i>
-            <input
-              type="text"
-              placeholder="輸入地點、價格或房型..."
-              v-model="searchQuery"
-              style="border-radius: 0; height: 50px;"
-            />
-          </div>
-          <div class="search-button" style="border-radius: 0;" @click="quickSearch">快速搜尋</div>
+          <p>整合式的校外住宿資訊平台，讓你的找房體驗更輕鬆</p>
+            <div class="search-container" style="border-radius: 8px;">
+            <div class="search-input">
+              <i class="search-icon"></i>
+              <input
+                type="text"
+                placeholder="一站式找房，讓住宿不再煩惱"
+                readonly
+                style="border-radius: 0; height: 50px; cursor: default; pointer-events: none;"
+              />
+            </div>
+            <div class="search-button" style="border-radius: 0;" @click="navigateToLogin">立即開始</div>
         </div>
       </div>
-
 </div>
 
 <!-- 介紹版塊 -->
@@ -359,11 +358,14 @@
 <script>
   import { ref, onMounted, onUnmounted, watch, nextTick } from "vue";
   import { useStore } from "vuex";
+  import { useRouter } from "vue-router";
 
   export default {
     name: "HomePage",
     setup() {
       const store = useStore();
+      const router = useRouter();
+      
       const searchQuery = ref("");
       
       // 統計資訊 (目標值)
@@ -386,10 +388,14 @@
         message: ""
       });
 
+      const navigateToLogin = () => {
+        router.push("/login");
+      };
+
       // 提交聯絡表單
       const submitForm = () => {
         // 這裡可以添加表單驗證
-        console.log("提交表單數據:", contactForm.value);
+        // console.log("提交表單數據:", contactForm.value);
         
         // 成功提交後顯示提示
         alert("感謝您的訊息！我們會盡快回覆您。");
@@ -475,69 +481,69 @@
       const featuredListings = [
         {
           id: 1,
-          title: "中大湖畔雙人套房",
-          price: 8000,
+          title: "【屋況新，家庭式房舍】",
+          price: 25000,
           distance: 0.8,
-          roomType: "套房",
+          roomType: "套房/雅房",
           rating: 4.5,
           reviews: 28,
           photo:
-            "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
+            "https://house.nfu.edu.tw/uploads/data/NCU/images_house/16997x1_20230810-161145.jpg",
         },
         {
           id: 2,
-          title: "松苑學生宿舍",
-          price: 6500,
+          title: "【大享街,中大隨筆,三房兩廳】",
+          price: 25000,
           distance: 1.2,
-          roomType: "雅房",
+          roomType: "套房/雅房",
           rating: 4.2,
           reviews: 45,
           photo:
-            "https://images.unsplash.com/photo-1493809842364-78817add7ffb?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
+            "https://house.nfu.edu.tw/uploads/data/NCU/images_house/16997x2_20230810-161145.jpg",
         },
         {
           id: 3,
-          title: "中壢區精品公寓",
-          price: 12000,
+          title: "房間出租 套房1間 雅房1間",
+          price: 7000,
           distance: 2.5,
-          roomType: "整層出租",
+          roomType: "套房/雅房",
           rating: 4.8,
           reviews: 17,
           photo:
-            "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
+            "https://house.nfu.edu.tw/uploads/data/NCU/images_house/4039x1.jpg",
         },
         {
           id: 4,
-          title: "中央舒適單人套房",
-          price: 7500,
+          title: "【一樓平房，消防安全性高】",
+          price: 4167,
           distance: 1.0,
           roomType: "套房",
           rating: 4.0,
           reviews: 32,
           photo:
-            "https://images.unsplash.com/photo-1554995207-c18c203602cb?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
+            "https://house.nfu.edu.tw/uploads/data/NCU/images_house/16549x1_20220609-190337.jpg",
         },
         {
           id: 5,
-          title: "桃園區豪華雙人套房",
-          price: 9800,
+          title: "【長青園-學生套房】 ",
+          price: 3333,
           distance: 3.2,
-          roomType: "雙人套房",
+          roomType: "套房",
           rating: 4.7,
           reviews: 41,
           photo:
-            "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
+            "https://house.nfu.edu.tw/uploads/data/NCU/images_house/3419x2.jpg",
         },
         {
           id: 6,
-          title: "近老街溪捷運站精裝套房",
-          price: 8500,
+          title: "房間出租 套房5間",
+          price: 4167,
           distance: 1.5,
-          roomType: "單人套房",
+          roomType: "套房",
           rating: 4.5,
           reviews: 37,
           photo:
-            "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
+            "https://house.nfu.edu.tw/uploads/data/NCU/images_house/4205x1.jpg",
         },
       ];
 
@@ -870,6 +876,7 @@
         testimonialContainer,
         nextTestimonial,
         prevTestimonial,
+        navigateToLogin,
         goToTestimonial,
         // 本月精選輪播
         currentListing,
@@ -1457,6 +1464,7 @@
     overflow: hidden;
     scroll-behavior: smooth;
     margin: 0 auto;
+    width: 100%;
   }
 
   .testimonial {
@@ -1468,13 +1476,7 @@
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
     transition: all 0.5s ease;
     text-align: center;
-  }
-
-  /* Remove the scale and opacity differences between testimonials */
-  /* All testimonials will now have the same shadow appearance */
-  .testimonial:nth-child(1) {
-    transform: none;
-    opacity: 1;
+    box-sizing: border-box;
   }
 
   .testimonial-content {
@@ -1559,11 +1561,11 @@
   }
 
   .prev-arrow {
-    left: -22px;
+    left: 10px;
   }
 
   .next-arrow {
-    right: -22px;
+    right: 10px;
   }
 
   .arrow-icon {
@@ -1604,25 +1606,90 @@
   }
 
   @media (max-width: 768px) {
+    .testimonials {
+      padding: 60px 15px;
+    }
+    
+    .testimonial-carousel {
+      padding: 10px 0;
+      width: calc(100% - 20px);
+      margin: 0 auto;
+    }
+    
     .testimonial {
-      padding: 20px;
+      padding: 25px 15px;
+      border-radius: 12px;
+      min-width: 100%;
+      width: 100%;
     }
     
     .testimonial-content p {
-      font-size: 1rem;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    
+    .testimonial-author {
+      gap: 10px;
+    }
+    
+    .author-avatar {
+      width: 60px;
+      height: 60px;
+    }
+    
+    .author-info h4 {
+      font-size: 1.1rem;
+    }
+    
+    .author-info p {
+      font-size: 0.85rem;
     }
     
     .carousel-arrow {
       width: 36px;
       height: 36px;
     }
+  }
+
+  @media (max-width: 480px) {
+    .testimonials h2 {
+      font-size: 1.7rem;
+    }
+    
+    .testimonial-carousel {
+      width: 100%;
+    }
+    
+    .testimonial {
+      padding: 20px 12px;
+      width: 100%;
+    }
+    
+    .testimonial-content p {
+      font-size: 0.9rem;
+    }
+    
+    .author-avatar {
+      width: 50px;
+      height: 50px;
+    }
+    
+    .author-info h4 {
+      font-size: 1rem;
+    }
     
     .prev-arrow {
-      left: -10px;
+      left: 5px;
     }
     
     .next-arrow {
-      right: -10px;
+      right: 5px;
+    }
+    
+    .carousel-arrow {
+      width: 32px;
+      height: 32px;
+      background-color: rgba(255, 255, 255, 0.9);
     }
   }
 
@@ -2038,6 +2105,11 @@
     .search-button {
       height: 50px;
       border-radius: 0 0 16px 16px;
+    }
+    
+    /* Hide stats container on mobile */
+    .stats-container {
+      display: none;
     }
   }
 

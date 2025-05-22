@@ -1,17 +1,11 @@
 <template>
   <div class="profile-page">
-    <!-- 保留現有的個人資料頭部 -->
     <div class="profile-header">
       <div class="profile-avatar">
-        <img
-          :src="
-            user.profile_image ||
-            'https://randomuser.me/api/portraits/women/65.jpg'
-          "
-          alt="用戶頭像"
-        />
-        <button class="edit-avatar-btn">
-          <i>📷</i>
+        <img :src="avatarUrl" alt="用戶頭像" />
+        <button class="edit-avatar-btn" @click="triggerFileInput" :disabled="isUploading">
+          <i class="fa-solid fa-camera" v-if="!isUploading"></i>
+          <i class="fa-solid fa-spinner fa-spin" v-else></i>
         </button>
         <input
           type="file"
@@ -20,7 +14,9 @@
           accept="image/*"
           @change="uploadAvatar"
         />
+        <div v-if="uploadError" class="upload-error">{{ uploadError }}</div>
       </div>
+      
       <div class="profile-info">
         <h1>
           {{ user.username }}
@@ -391,7 +387,10 @@
           <settings-item label="密碼">
             <div class="password-field">
               <div class="masked-password">••••••••</div>
-              <button class="settings-btn highlight" @click="showPasswordModal = true">
+              <button
+                class="settings-btn highlight"
+                @click="showPasswordModal = true"
+              >
                 修改密碼
               </button>
             </div>
@@ -558,6 +557,8 @@
           :user-email="user.email"
         />
       </div>
+
+      <ChatRoom  v-if="activeTab === 'chatroom'"/>
     </div>
   </div>
 </template>
@@ -573,6 +574,7 @@
   import SettingsItem from "@/components/profile/SettingsItem.vue";
   import PasswordChangeModal from "@/components/profile/PasswordChangeModal.vue";
   import ForgotPasswordModal from "@/components/profile/ForgotPasswordModal.vue";
+  import ChatRoom from "@/components/ChatRoom.vue";
 
   export default {
     name: "ProfilePage",
@@ -584,19 +586,96 @@
       SettingsItem,
       PasswordChangeModal,
       ForgotPasswordModal,
+      ChatRoom,
     },
     setup() {
       const router = useRouter();
+
       const activeTab = ref("housing");
+
       const loading = ref(true);
       const error = ref(null);
+
       const showEditModal = ref(false);
       const showPasswordModal = ref(false);
       const showForgotPasswordModal = ref(false);
       const showBindPortalModal = ref(false);
       const showEmailVerificationModal = ref(false);
       const showPhoneVerificationModal = ref(false);
+
       const isProcessingPortal = ref(false);
+
+      const fileInput = ref(null);
+      const isUploading = ref(false);
+      const uploadError = ref(null);
+
+      const avatarUrl = computed(() => {
+        if (user.value && user.value.profile_image) {
+          // 如果已經是完整 URL（以 http 開頭），直接返回
+          if (user.value.profile_image.startsWith("http")) {
+            return user.value.profile_image;
+          }
+
+          // 否則拼接 API 基礎 URL
+          return `http://localhost:5000${user.value.profile_image}`;
+
+        }
+
+        // 如果沒有頭像，返回預設頭像
+        return require("@/assets/default-avatar.jpg"); // 確保這個檔案存在
+      });
+
+      // 觸發文件選擇對話框
+      const triggerFileInput = () => {
+        fileInput.value.click();
+      };
+
+      // 上傳頭像
+      const uploadAvatar = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        try {
+          // 顯示上傳中狀態
+          isUploading.value = true;
+          uploadError.value = null;
+
+          const formData = new FormData();
+          formData.append("image", file);
+
+          const response = await apiService.users.uploadProfileImage(formData);
+
+          if (response && response.profile_image) {
+            // 更新用戶頭像
+            user.value.profile_image = response.profile_image;
+
+            // 更新本地儲存的用戶資訊
+            const userStr = localStorage.getItem("user");
+            if (userStr) {
+              const userData = JSON.parse(userStr);
+              userData.profile_image = response.profile_image;
+              localStorage.setItem("user", JSON.stringify(userData));
+            }
+
+            // 強制刷新頭像顯示
+            const timestamp = new Date().getTime();
+            const cachedAvatarUrl = avatarUrl.value;
+            if (cachedAvatarUrl.includes("?")) {
+              avatarUrl.value = `${
+                cachedAvatarUrl.split("?")[0]
+              }?t=${timestamp}`;
+            } else {
+              avatarUrl.value = `${cachedAvatarUrl}?t=${timestamp}`;
+            }
+          }
+        } catch (error) {
+          console.error("上傳頭像失敗:", error);
+          uploadError.value = error.message || "上傳失敗，請稍後再試";
+        } finally {
+          isUploading.value = false;
+          event.target.value = ""; // 清空檔案輸入框，以便可以再次選擇同一檔案
+        }
+      };
 
       // 個人資料編輯表單
       const editForm = reactive({
@@ -629,6 +708,7 @@
         const baseTabs = [
           { id: "housing", name: "我的租屋資訊" },
           { id: "settings", name: "帳戶設置" },
+          { id: "chatroom", name: "聊天室" },
         ];
 
         // 如果用户有發佈權限則添加「我的發布」標籤
@@ -723,27 +803,6 @@
         editForm.phone = user.value.phone || "";
         editForm.bio = user.value.bio || "";
         showEditModal.value = true;
-      };
-
-      // 上傳頭像
-      const uploadAvatar = async (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const formData = new FormData();
-        formData.append("image", file);
-
-        try {
-          const response = await apiService.users.uploadProfileImage(formData);
-
-          if (response && response.profile_image) {
-            user.value.profile_image = response.profile_image;
-            alert("頭像已更新");
-          }
-        } catch (err) {
-          console.error("上傳頭像失敗:", err);
-          alert(`上傳失敗: ${err.message || "未知錯誤"}`);
-        }
       };
 
       // 綁定 Portal 帳號
@@ -942,7 +1001,12 @@
         editForm,
         passwordForm,
         openEditModal,
+        fileInput,
+        avatarUrl,
+        triggerFileInput,
         uploadAvatar,
+        uploadError,
+        isUploading,
         bindPortalAccount,
         deleteAccount,
         goToAdminDashboard,
@@ -1001,13 +1065,17 @@
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background-color: #007bff;
+    background-color: #c4e1ff;
     color: white;
     border: none;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+  }
+
+  i {
+    color: black;
   }
 
   .profile-info {
@@ -1188,7 +1256,7 @@
     gap: 20px;
     width: 100%;
   }
-  
+
   .masked-password {
     flex: 1;
     letter-spacing: 2px;
@@ -1354,6 +1422,7 @@
   }
 
   .active {
+    background-color: #c4e1ff;
     color: white;
   }
 
@@ -1451,40 +1520,185 @@
   }
 
   /* 帳戶設置 */
-  .account-settings {
-    padding: 30px;
-  }
+.account-settings {
+  padding: 35px;
+  max-width: 900px;
+  margin: 0 auto;
+}
 
-  .settings-section {
-    margin-bottom: 40px;
-  }
+.settings-section {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 25px;
+  margin-bottom: 30px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
 
-  .settings-section h2 {
-    font-size: 1.4rem;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #eee;
-  }
+.settings-section h2 {
+  font-size: 1.5rem;
+  color: #2c3e50;
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #eef2f7;
+}
 
-  .settings-item {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    padding: 15px 0;
-    border-bottom: 1px solid #f5f5f5;
-  }
+.settings-item {
+  display: flex;
+  align-items: center;
+  padding: 20px 0;
+  border-bottom: 1px solid #f5f7fa;
+  transition: background-color 0.2s ease;
+}
 
-  .settings-label {
-    width: 150px;
-    font-weight: 500;
-  }
+.settings-item:last-child {
+  border-bottom: none;
+}
 
-  .settings-content {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-  }
+.settings-item:hover {
+  background-color: #f8fafc;
+}
+
+.settings-label {
+  width: 180px;
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.95rem;
+}
+
+.settings-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* 開關按鈕樣式優化 */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 26px;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #e5e7eb;
+  transition: 0.3s;
+  border-radius: 34px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+input:checked + .slider {
+  background-color: #3b82f6;
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+/* 下拉選單樣式優化 */
+.settings-select {
+  padding: 10px 15px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  width: 200px;
+  font-size: 0.95rem;
+  color: #4b5563;
+  background-color: white;
+  transition: all 0.2s ease;
+}
+
+.settings-select:hover {
+  border-color: #cbd5e1;
+}
+
+.settings-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* 按鈕樣式優化 */
+.settings-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.settings-btn.highlight {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.settings-btn.highlight:hover {
+  background-color: #2563eb;
+  transform: translateY(-1px);
+}
+
+.settings-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 危險區域樣式優化 */
+.danger-zone {
+  margin-top: 40px;
+  padding: 25px;
+  background-color: #fef2f2;
+  border-radius: 12px;
+  border: 1px solid #fee2e2;
+}
+
+.danger-zone h2 {
+  color: #dc2626;
+  font-size: 1.3rem;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.danger-zone h2:before {
+  content: "⚠️";
+}
+
+.danger-btn {
+  background-color: #dc2626;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.danger-btn:hover {
+  background-color: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+}
 
   .verified-tag {
     padding: 2px 8px;
