@@ -105,7 +105,7 @@ export default {
   name: "MapSearch",
   setup() {
     const store = useStore()
-    const router = useRouter();
+    const router = useRouter()
     const imageLoadStatus = ref({})
     
     // 修改圖片處理邏輯
@@ -196,6 +196,35 @@ export default {
       document.body.style.overflow = "auto";
     };
 
+    // 檢查是否為收藏
+    const isFavorite = (id) => {
+      return store.getters.isFavorite(id)
+    }
+
+    // 添加/移除收藏
+    const toggleFavorite = async (property) => {
+      try {
+        if (isFavorite(property.編碼)) {
+          await store.dispatch('removeFavorite', property.編碼)
+        } else {
+          await store.dispatch('addFavorite', property)
+        }
+      } catch (error) {
+        console.error('Error toggling favorite:', error)
+      }
+    }
+
+    // 處理導航
+    onMounted(() => {
+      // 添加全局導航函數
+      window.viewPropertyDetails = (propertyId) => {
+        router.push({
+          name: 'accommodation-list',
+          query: { id: propertyId, openDetail: true }
+        })
+      }
+    })
+
     return {
       imageLoadStatus,
       getPropertyImage,
@@ -207,6 +236,8 @@ export default {
       currentPhotoIndex,
       showPropertyDetail,
       closePropertyDetail,
+      isFavorite,
+      toggleFavorite
     }
   },
   data() {
@@ -437,7 +468,7 @@ export default {
                   <div class="gm-image-container">
                     <div class="gm-property-image" style="background-image: ${imageStyle}"></div>
                     <button class="gm-favorite-btn" data-property-id="${property.編碼}">
-                      <div class="gm-heart-icon"></div>
+                      <div class="gm-heart-icon ${this.isFavorite(property.編碼) ? 'active' : ''}"></div>
                     </button>
                   </div>
                   <div class="gm-details">
@@ -456,7 +487,7 @@ export default {
                       <span>${property.出租房數.套房.坪數}</span>
                       ${property.出租房數.套房.空房 ? `<span>空房: ${property.出租房數.套房.空房}間</span>` : ''}
                     </div>
-                    <button class="gm-action-btn" onclick="window.viewPropertyDetails(${property.編碼})">
+                    <button class="gm-action-btn" onclick="viewPropertyDetails(${property.編碼})">
                       前往查看
                     </button>
                   </div>
@@ -471,22 +502,15 @@ export default {
 
             // 添加信息窗口的 domready 事件監聽
             google.maps.event.addListener(infoWindow, 'domready', () => {
-              const favoriteBtn = document.querySelector(`.remove-favorite[data-property-id="${property.編碼}"]`);
+              const favoriteBtn = document.querySelector(`.gm-favorite-btn[data-property-id="${property.編碼}"]`);
               if (favoriteBtn) {
                 favoriteBtn.addEventListener('click', (e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  this.removeFavorite(property.編碼);
-                });
-              }
-
-              const actionButton = document.querySelector('.action-button');
-              if (actionButton) {
-                actionButton.addEventListener('click', () => {
-                  router.push({
-                    name: 'accommodation-detail',
-                    params: { id: property.編碼 }
-                  });
+                  this.toggleFavorite(property);
+                  
+                  const heartIcon = favoriteBtn.querySelector('.gm-heart-icon');
+                  heartIcon.classList.toggle('active');
                 });
               }
             });
