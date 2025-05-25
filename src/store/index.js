@@ -134,6 +134,16 @@ export default createStore({
       );
     },
 
+    ADD_FAVORITE(state, id) {
+      if (!state.favoriteIds.includes(id)) {
+        state.favoriteIds.push(id);
+        localStorage.setItem(
+          "favoriteAccommodations",
+          JSON.stringify(state.favoriteIds)
+        );
+      }
+    },
+
     TOGGLE_MAP_VIEW(state) {
       state.mapView = !state.mapView;
     },
@@ -174,6 +184,14 @@ export default createStore({
     SET_ALL_COMMENTS(state, comments) {
       // 替換所有評論數據
       state.comments = comments;
+    },
+
+    UPDATE_PROPERTY_LOCATION(state, { id, location }) {
+      const property = state.accommodations.find(p => p.編碼 === id)
+      if (property) {
+        property.latitude = location.latitude
+        property.longitude = location.longitude
+      }
     }
   },
 
