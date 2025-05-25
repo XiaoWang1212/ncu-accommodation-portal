@@ -34,22 +34,24 @@
                @click="selectProperty(property.編碼)">
             <div class="item-details">
               <div class="details-left">
-                <div class="image-container">
-                  <div class="property-thumbnail"
-                    :style="{ backgroundImage: getPropertyImage(property, 0) }">
-                  </div>
+              <div class="image-container">
+                <div class="property-thumbnail"
+                :style="{ backgroundImage: getPropertyImage(property, 0) }">
                 </div>
+                <!-- 加入遮罩防止圖片超出範圍 -->
+                <div style="position:absolute;inset:0;pointer-events:none;border-radius:8px;box-shadow:0 0 0 1px #f5f5f5;"></div>
+              </div>
               </div>
               <div class="details-right">
-                <h4>{{ property.標題 }}</h4>
-                <div class="price">{{ property.房租 }}</div>
-                <div class="location">
-                  <i class="location-icon">📍</i> {{ property.地址 }}
-                </div>
-                <div class="amenities">
-                  <span>{{ property.出租房數.套房.坪數 }}</span>
-                  <span v-if="property.出租房數.套房.空房">空房: {{ property.出租房數.套房.空房 }}</span>
-                </div>
+              <h4>{{ property.標題 }}</h4>
+              <div class="price">{{ property.房租 }}</div>
+              <div class="location">
+                <i class="location-icon">📍</i> {{ property.地址 }}
+              </div>
+              <div class="amenities">
+                <span>{{ property.出租房數.套房.坪數 }}</span>
+                <span v-if="property.出租房數.套房.空房">空房: {{ property.出租房數.套房.空房 }}</span>
+              </div>
               </div>
             </div>
           </div>
@@ -93,6 +95,7 @@
 </template>
 
 <script>
+import '@/assets/map-info-window.css';
 import { ref, onMounted, computed } from 'vue'
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router';
@@ -266,6 +269,14 @@ export default {
 
   mounted() {
     this.initGoogleMaps();
+
+    // 添加全局函數用於按鈕點擊
+    window.viewDetails = (propertyId) => {
+      this.router.push({
+        name: 'accommodation-detail',
+        params: { id: propertyId }
+      });
+    };
   },
 
   methods: {
@@ -399,72 +410,114 @@ export default {
         this.markers = [];
       }
 
-      if (!this.map || !this.properties || !window.google) return;
+      if (!this.map || !this.filteredProperties || !window.google) return;
 
       // 建立地理編碼服務
       const geocoder = new window.google.maps.Geocoder();
 
       // 為每個物件建立標記
-      this.properties.forEach(property => {
+      this.filteredProperties.forEach(property => {
         // 使用地址進行地理編碼
         geocoder.geocode({ address: property.地址 }, (results, status) => {
           if (status === 'OK' && results[0]) {
             const position = results[0].geometry.location;
-            
-            // 在 marker 建立時保存物件 ID
             const marker = new window.google.maps.Marker({
               position: position,
               map: this.map,
               title: property.標題,
               animation: window.google.maps.Animation.DROP
             });
-            marker.propertyId = property.編碼; // 新增這行
 
-            // 建立資訊視窗內容
+            const imageStyle = this.getPropertyImage(property, 0);
+            
+            // 使用與 FavoritesPage 相同的愛心按鈕結構
             const content = `
-              <div class="map-info-window">
-                <h3 class="info-title">${property.標題}</h3>
-                <p class="info-price">月租 ${property.房租}</p>
-                <div class="info-amenities">
-                  <span>${property.出租房數.套房.坪數}</span>
-                  ${property.出租房數.套房.空房 ? `<span>空房: ${property.出租房數.套房.空房}</span>` : ''}
+              <div class="gm-info-window">
+                <div class="gm-info-content">
+                  <div class="gm-image-container">
+                    <div class="gm-property-image" style="background-image: ${imageStyle}"></div>
+                    <button class="gm-favorite-btn" data-property-id="${property.編碼}">
+                      <div class="gm-heart-icon"></div>
+                    </button>
+                  </div>
+                  <div class="gm-details">
+                    <div class="gm-rating">
+                      <span class="gm-score">${(Math.random() * 2 + 8).toFixed(1)}</span>
+                      <span class="gm-reviews">${Math.floor(Math.random() * 100)} 則評價</span>
+                    </div>
+                    <h3 class="gm-title">${property.標題}</h3>
+                    <div class="gm-location">
+                      <span>中壢</span>
+                      <span class="gm-dot">•</span>
+                      <span>距中心 ${(Math.random() * 3 + 1).toFixed(1)} 公里</span>
+                    </div>
+                    <div class="gm-price">NT$ ${property.房租}/月</div>
+                    <div class="gm-tags">
+                      <span>${property.出租房數.套房.坪數}</span>
+                      ${property.出租房數.套房.空房 ? `<span>空房: ${property.出租房數.套房.空房}間</span>` : ''}
+                    </div>
+                    <button class="gm-action-btn" onclick="window.viewPropertyDetails(${property.編碼})">
+                      前往查看
+                    </button>
+                  </div>
                 </div>
-                <button class="view-details-btn" onclick="viewPropertyDetails(${property.編碼})">
-                  查看詳細資訊
-                </button>
               </div>
             `;
 
-            // 添加全局函數以處理詳細資訊按鈕點擊
-            window.viewPropertyDetails = (propertyId) => {
-              // 使用 router 導航到詳細資訊頁面
-              this.$router.push(`/accommodation/${propertyId}`);
-            };
-
-            // 建立資訊視窗
             const infoWindow = new window.google.maps.InfoWindow({
-              content: content
+              content: content,
+              maxWidth: 400
             });
 
-            // 添加點擊事件
+            // 添加信息窗口的 domready 事件監聽
+            google.maps.event.addListener(infoWindow, 'domready', () => {
+              const favoriteBtn = document.querySelector(`.remove-favorite[data-property-id="${property.編碼}"]`);
+              if (favoriteBtn) {
+                favoriteBtn.addEventListener('click', (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  this.removeFavorite(property.編碼);
+                });
+              }
+
+              const actionButton = document.querySelector('.action-button');
+              if (actionButton) {
+                actionButton.addEventListener('click', () => {
+                  router.push({
+                    name: 'accommodation-detail',
+                    params: { id: property.編碼 }
+                  });
+                });
+              }
+            });
+
             marker.addListener('click', () => {
-              // 關閉其他開啟的資訊視窗
               this.markers.forEach(m => m.infoWindow?.close());
-              
               infoWindow.open(this.map, marker);
-              this.selectProperty(property.編碼);
-              this.map.panTo(position);
             });
 
-            // 儲存標記和資訊視窗的引用
             marker.infoWindow = infoWindow;
+            marker.propertyId = property.編碼;
             this.markers.push(marker);
-          } else {
-            console.warn(`地理編碼失敗: ${property.地址}`, status);
           }
         });
       });
     },
+
+    // 添加移除收藏方法
+    async removeFavorite(id) {
+      try {
+        const success = await this.$store.dispatch('removeFavorite', id);
+        if (!success) {
+          setTimeout(() => {
+            // alert("因連線問題，變更僅保存在本機。下次登入時將同步變更。");
+          }, 300);
+        }
+      } catch (error) {
+        console.error("Error removing favorite:", error);
+      }
+    },
+
     filterByPrice(range) {
       this.currentFilter = range;
       // 不需要額外過濾，因為 filteredProperties computed 屬性會處理
@@ -513,6 +566,7 @@ export default {
 </script>
 
 <style scoped>
+/* 保留現有的地圖和側邊欄樣式 */
 .map-search {
   display: flex;
   height: 100vh;
@@ -845,12 +899,6 @@ h4 {
   align-items: stretch;
 }
 
-.image-container {
-  width: 150px; /* 固定寬度 */
-  height: 150px; /* 固定高度，保持正方形 */
-  flex-shrink: 0;
-}
-
 .info-image {
   width: 100%;
   height: 100%;
@@ -886,7 +934,6 @@ h4 {
 .info-window::before {
   content: '';
   position: absolute;
-  border: 8px solid transparent;
 }
 
 .info-window:not(.show-below)::before {
@@ -903,175 +950,127 @@ h4 {
   border-bottom-color: white;
 }
 
-/* 地圖資訊視窗樣式 */
-::v-deep .map-info-window {
-  padding: 15px;
-  min-width: 200px;
+/* 確保這些樣式存在且沒有重複 */
+.map-info-window {
+  width: 300px;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
 }
 
-::v-deep .info-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #333;
-  margin: 0 0 8px 0;
-}
-
-::v-deep .info-price {
-  color: #007bff;
-  font-weight: bold;
-  font-size: 1.1rem;
-  margin: 8px 0;
-}
-
-::v-deep .info-amenities {
-  display: flex;
-  gap: 8px;
-  margin: 8px 0;
-}
-
-::v-deep .info-amenities span {
-  background: #f5f5f5;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  color: #666;
-}
-
-::v-deep .view-details-btn {
-  background: #007bff;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
+.info-image-container {
   width: 100%;
-  margin-top: 8px;
-  transition: background-color 0.2s;
+  height: 200px;
+  position: relative;
+  overflow: hidden;
 }
 
-::v-deep .view-details-btn:hover {
-  background: #0056b3;
-}
-
-/* 詳細資訊視窗樣式 */
-.property-detail-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
+.info-image {
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.8);
+  background-size: cover;
+  background-position: center;
+  transition: transform 0.3s;
+}
+
+.info-content {
+  padding: 16px;
+}
+
+.action-button {
+  width: 100%;
+  height: 44px;
+  background: #0066cc;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  overflow: hidden;
+  margin-top: 16px;
 }
 
-.modal-content {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  position: relative;
-  max-width: 800px;
-  width: 90%;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+.action-button:hover {
+  background: #0052a3;
 }
 
-.close {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  font-size: 24px;
-  cursor: pointer;
-  color: #333;
-}
-
-.slideshow-container {
-  position: relative;
-  max-width: 100%;
-  margin: 0 auto 20px;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.mySlides {
-  display: none;
-}
-
-.property-image {
-  width: 100%;
-  height: 400px;
-  object-fit: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-
-.prev, .next {
-  cursor: pointer;
-  position: absolute;
-  top: 50%;
-  width: auto;
-  padding: 16px;
-  margin-top: -22px;
-  color: white;
-  font-weight: bold;
-  font-size: 18px;
-  transition: 0.6s ease;
-  border-radius: 0 3px 3px 0;
-  user-select: none;
-}
-
-.next {
-  right: 0;
-  border-radius: 3px 0 0 3px;
-}
-
-.prev:hover, .next:hover {
-  background-color: rgba(0, 0, 0, 0.8);
-}
-
-.property-details {
+/* 評分和其他內容樣式 */
+.rating-section {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
-.property-details h2 {
-  margin: 0;
-  font-size: 1.5rem;
-  color: #333;
-}
-
-.property-details .price {
+.score {
+  background: #0066cc;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
   font-weight: bold;
-  color: #007bff;
-  font-size: 1.2rem;
-  line-height: 1.2;
 }
 
-.property-details .location {
+.reviews {
   color: #666;
-  font-size: 1rem;
-  margin: 4px 0;
+  font-size: 14px;
+}
+
+.location {
+  color: #666;
+  font-size: 14px;
+  margin: 8px 0;
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.property-details .amenities {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  font-size: 0.9rem;
-  color: #666;
-  line-height: 1.4;
+.dot {
+  color: #999;
 }
 
-.property-details .amenities span {
+.price {
+  color: #0066cc;
+  font-size: 18px;
+  font-weight: bold;
+  margin: 12px 0;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tags span {
   background: #f5f5f5;
   padding: 6px 12px;
-  border-radius: 4px;
-  white-space: nowrap;
+  border-radius: 16px;
+  font-size: 14px;
+  color: #666;
+}
+
+/* Google Maps InfoWindow 樣式覆蓋 */
+::v-deep .gm-style .gm-style-iw-c {
+  padding: 0 !important;
+  border-radius: 12px !important;
+}
+
+::v-deep .gm-style .gm-style-iw-d {
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+::v-deep .gm-style .gm-style-iw-t::after {
+  display: none;
+}
+
+::v-deep .gm-ui-hover-effect {
+  display: none !important;
 }
 </style>

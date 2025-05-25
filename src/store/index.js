@@ -38,6 +38,9 @@ export default createStore({
 
     // 修改：評論資料結構，空物件準備從資料庫加載
     comments: {},
+
+    // 新增：收藏的房源
+    favorites: []
   },
 
   mutations: {
@@ -134,56 +137,12 @@ export default createStore({
       );
     },
 
-    ADD_FAVORITE(state, id) {
-      if (!state.favoriteIds.includes(id)) {
-        state.favoriteIds.push(id);
-        localStorage.setItem(
-          "favoriteAccommodations",
-          JSON.stringify(state.favoriteIds)
-        );
-      }
+    ADD_FAVORITE(state, property) {
+      state.favorites.push(property)
     },
 
-    TOGGLE_MAP_VIEW(state) {
-      state.mapView = !state.mapView;
-    },
-
-    SET_MAP_CENTER(state, center) {
-      state.mapCenter = center;
-    },
-
-    // 更新評論相關 mutations
-    ADD_COMMENT(state, { propertyId, comment }) {
-      if (!state.comments[propertyId]) {
-        state.comments[propertyId] = [];
-      }
-      state.comments[propertyId].unshift(comment);
-
-      // 可保留 localStorage 作為緩存，或完全依賴資料庫
-      localStorage.setItem("propertyComments", JSON.stringify(state.comments));
-    },
-
-    LIKE_COMMENT(state, { propertyId, commentId }) {
-      const comment = state.comments[propertyId]?.find(
-        (c) => c.id === commentId
-      );
-      if (comment) {
-        comment.likes += 1;
-        localStorage.setItem(
-          "propertyComments",
-          JSON.stringify(state.comments)
-        );
-      }
-    },
-
-    SET_PROPERTY_COMMENTS(state, { propertyId, comments }) {
-      // 設置特定房源的評論
-      state.comments[propertyId] = comments;
-    },
-
-    SET_ALL_COMMENTS(state, comments) {
-      // 替換所有評論數據
-      state.comments = comments;
+    REMOVE_FAVORITE(state, propertyId) {
+      state.favorites = state.favorites.filter(item => item.編碼 !== propertyId)
     },
 
     UPDATE_PROPERTY_LOCATION(state, { id, location }) {
@@ -747,6 +706,9 @@ export default createStore({
     },
     getPropertyComments: (state) => (propertyId) => {
       return state.comments[propertyId] || [];
+    },
+    isFavorite: (state) => (id) => {
+      return state.favorites.some(item => item.編碼 === id)
     },
 
     // 計算每個房源的平均評分
