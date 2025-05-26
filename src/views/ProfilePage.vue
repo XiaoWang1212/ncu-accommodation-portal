@@ -252,6 +252,7 @@
         </div>
 
         <div class="maintenance-history">
+          <!-- 已解決的報修項目 -->
           <div class="maintenance-item">
             <div class="maintenance-status resolved">已解決</div>
             <div class="maintenance-header">
@@ -262,12 +263,12 @@
               <p>冷氣開機後無法正常製冷，可能是需要添加冷媒。</p>
               <div class="maintenance-photos">
                 <img
-                  src="https://picsum.photos/id/100/100/100"
+                  v-for="(image, index) in ['https://picsum.photos/id/100/800/600', 'https://picsum.photos/id/101/800/600']"
+                  :key="index"
+                  :src="image.replace('/800/600', '/100/100')"
                   alt="故障照片"
-                />
-                <img
-                  src="https://picsum.photos/id/101/100/100"
-                  alt="故障照片"
+                  @click="openImagePreview(image)"
+                  class="maintenance-photo"
                 />
               </div>
             </div>
@@ -281,6 +282,7 @@
             </div>
           </div>
 
+          <!-- 處理中的報修項目 -->
           <div class="maintenance-item">
             <div class="maintenance-status pending">處理中</div>
             <div class="maintenance-header">
@@ -291,8 +293,12 @@
               <p>浴室排水口排水緩慢，洗澡時容易積水。</p>
               <div class="maintenance-photos">
                 <img
-                  src="https://picsum.photos/id/102/100/100"
+                  v-for="(image, index) in ['https://picsum.photos/id/102/800/600']"
+                  :key="index"
+                  :src="image.replace('/800/600', '/100/100')"
                   alt="故障照片"
+                  @click="openImagePreview(image)"
+                  class="maintenance-photo"
                 />
               </div>
             </div>
@@ -301,7 +307,23 @@
               <p>已記錄，將於近日安排水電師傅查看。</p>
             </div>
           </div>
+
+          <!-- 新增報修按鈕 -->
+          <button class="add-maintenance-btn">
+            <span class="plus-icon">+</span>
+            新增報修申請
+          </button>
         </div>
+
+        <!-- 照片預覽模態視窗 -->
+        <Transition name="modal">
+          <div v-if="showImagePreview" class="image-preview-modal" @click="closeImagePreview">
+            <div class="preview-content" @click.stop>
+              <img :src="selectedImage" alt="報修照片預覽" class="preview-image">
+              <button class="close-preview" @click="closeImagePreview">&times;</button>
+            </div>
+          </div>
+        </Transition>
       </div>
 
       <!-- 我的發布 -->
@@ -706,6 +728,18 @@
       const showEmailVerificationModal = ref(false);
       const showPhoneVerificationModal = ref(false);
 
+      const showImagePreview = ref(false);
+      const selectedImage = ref('');
+      
+      const openImagePreview = (image) => {
+        selectedImage.value = image;
+        showImagePreview.value = true;
+      };
+      
+      const closeImagePreview = () => {
+        showImagePreview.value = false;
+      };
+
       const isProcessingPortal = ref(false);
 
       const fileInput = ref(null);
@@ -1103,6 +1137,10 @@
         handleLogout,
         confirmLogout,
         showContactModal,
+        showImagePreview,
+        selectedImage,
+        openImagePreview,
+        closeImagePreview,
       };
     },
   };
@@ -1464,6 +1502,214 @@
     height: 3px;
     background-color: #007bff;
   }
+
+  /* 報修紀錄樣式優化 */
+.maintenance-history {
+  margin-top: 20px;
+  margin-bottom: 40px;
+}
+
+.maintenance-item {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  margin-bottom: 20px;
+  padding: 20px;
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.maintenance-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.maintenance-status {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.maintenance-status.resolved {
+  background-color: #d1fae5;
+  color: #047857;
+}
+
+.maintenance-status.pending {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+
+.maintenance-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #f3f4f6;
+  padding-right: 90px; /* 為狀態標籤留出空間 */
+}
+
+.maintenance-header h3 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 1.1rem;
+}
+
+.maintenance-date {
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.maintenance-details p {
+  color: #4b5563;
+  margin-bottom: 15px;
+  line-height: 1.6;
+}
+
+.maintenance-photos {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 5px 0 15px 0;
+}
+
+.maintenance-photo {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 2px solid #f3f4f6;
+}
+
+.maintenance-photo:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #e5e7eb;
+}
+
+.response-header, .resolution-header {
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.maintenance-response, .maintenance-resolution {
+  background: #f9fafb;
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 15px;
+}
+
+.maintenance-resolution {
+  background: #f0f9ff;
+}
+
+/* 新增報修按鈕 */
+.add-maintenance-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  color: #4b5563;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.add-maintenance-btn:hover {
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  transform: translateY(-2px);
+}
+
+.plus-icon {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+/* 圖片預覽模態框 */
+.image-preview-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.preview-content {
+  position: relative;
+  max-width: 90%;
+  max-height: 90vh;
+}
+
+.preview-image {
+  max-width: 100%;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.close-preview {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 32px;
+  cursor: pointer;
+  padding: 10px;
+  transition: transform 0.2s ease;
+}
+
+.close-preview:hover {
+  transform: rotate(90deg);
+}
+
+/* 模態框動畫 */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-enter-active .preview-content,
+.modal-leave-active .preview-content {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.modal-enter-from {
+  opacity: 0;
+}
+
+.modal-enter-from .preview-content {
+  transform: scale(0.8);
+  opacity: 0;
+}
+
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-leave-to .preview-content {
+  transform: scale(0.8);
+  opacity: 0;
+}
 
   /* 我的租屋資訊 */
   .housing-info {
