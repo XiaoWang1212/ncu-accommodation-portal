@@ -173,7 +173,36 @@
                   <div class="landlord-name">張先生</div>
                   <div class="landlord-contact">0912-345-678</div>
                 </div>
-                <button class="contact-btn">聯絡房東</button>
+                <button class="contact-btn" @click="showContactModal = true">聯絡房東</button>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="showContactModal" class="modal-overlay" @click="showContactModal = false">
+            <div class="modal-container" @click.stop>
+              <div class="modal-header">
+                <h3>房東聯絡資訊</h3>
+                <button class="modal-close" @click="showContactModal = false">&times;</button>
+              </div>
+              <div class="modal-body">
+                <div class="contact-info-item">
+                  <svg viewBox="0 0 24 24" width="16" height="16">
+                    <path fill="#666" d="M17,19H7V5H17M17,1H7C5.89,1 5,1.89 5,3V21A2,2 0 0,0 7,23H17A2,2 0 0,0 19,21V3C19,1.89 18.1,1 17,1Z"/>
+                  </svg>
+                  <span>手機：0912-345-678</span>
+                </div>
+                <div class="contact-info-item">
+                  <svg viewBox="0 0 24 24" width="16" height="16">
+                    <path fill="#666" d="M20,4H4C2.9,4,2,4.9,2,6v12c0,1.1,0.9,2,2,2h16c1.1,0,2-0.9,2-2V6C22,4.9,21.1,4,20,4z M20,8l-8,5L4,8V6l8,5l8-5V8z"/>
+                  </svg>
+                  <span>Email：landlord@example.com</span>
+                </div>
+                <div class="contact-info-item">
+                  <svg viewBox="0 0 24 24" width="16" height="16">
+                    <path fill="#666" d="M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.42,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.58,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z"/>
+                  </svg>
+                  <span>Line ID：landlord_123</span>
+                </div>
               </div>
             </div>
           </div>
@@ -687,6 +716,8 @@
       const isAdmin = computed(() => store.getters["user/isAdmin"]);
       const avatarUrl = computed(() => store.getters["user/avatarUrl"]);
 
+      const showContactModal = ref(false);
+
       const fetchUserData = async () => {
         try {
           loading.value = true;
@@ -1071,6 +1102,7 @@
         handleShowPasswordChange,
         handleLogout,
         confirmLogout,
+        showContactModal,
       };
     },
   };
@@ -1131,6 +1163,96 @@
   i {
     color: black;
   }
+
+  .modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-container {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.2rem;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  transition: color 0.2s ease;
+}
+
+.modal-close:hover {
+  color: #333;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.contact-info-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  transition: background-color 0.2s ease;
+}
+
+.contact-info-item:hover {
+  background: #f0f0f0;
+}
+
+.contact-info-item:last-child {
+  margin-bottom: 0;
+}
+
+/* 動畫效果 */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
   .profile-info {
     flex: 1;
@@ -1484,6 +1606,9 @@
     border: none;
     border-radius: 6px;
     cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
   }
 
   /* 租屋操作按鈕樣式優化 */
@@ -1492,6 +1617,39 @@
   grid-template-columns: repeat(4, 1fr);
   gap: 15px;
   padding: 20px 0;
+}
+
+/* 懸浮效果 */
+.contact-btn:hover {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
+}
+
+/* 點擊效果 */
+.contact-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 123, 255, 0.1);
+  background-color: #0050a6;
+}
+
+/* 添加漣漪效果 */
+.contact-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.3s, height 0.3s;
+}
+
+.contact-btn:active::after {
+  width: 200px;
+  height: 200px;
 }
 
 .action-btn {
