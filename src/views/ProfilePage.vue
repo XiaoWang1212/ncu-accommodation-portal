@@ -71,7 +71,7 @@
           </div>
         </div>
       </div>
-      <button class="logout-btn" @click="handleLogout">
+      <button class="logout-btn" @click="confirmLogout">
         <span class="material-symbols-outlined"> logout </span>登出
       </button>
       <button
@@ -173,7 +173,36 @@
                   <div class="landlord-name">張先生</div>
                   <div class="landlord-contact">0912-345-678</div>
                 </div>
-                <button class="contact-btn">聯絡房東</button>
+                <button class="contact-btn" @click="showContactModal = true">聯絡房東</button>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="showContactModal" class="modal-overlay" @click="showContactModal = false">
+            <div class="modal-container" @click.stop>
+              <div class="modal-header">
+                <h3>房東聯絡資訊</h3>
+                <button class="modal-close" @click="showContactModal = false">&times;</button>
+              </div>
+              <div class="modal-body">
+                <div class="contact-info-item">
+                  <svg viewBox="0 0 24 24" width="16" height="16">
+                    <path fill="#666" d="M17,19H7V5H17M17,1H7C5.89,1 5,1.89 5,3V21A2,2 0 0,0 7,23H17A2,2 0 0,0 19,21V3C19,1.89 18.1,1 17,1Z"/>
+                  </svg>
+                  <span>手機：0912-345-678</span>
+                </div>
+                <div class="contact-info-item">
+                  <svg viewBox="0 0 24 24" width="16" height="16">
+                    <path fill="#666" d="M20,4H4C2.9,4,2,4.9,2,6v12c0,1.1,0.9,2,2,2h16c1.1,0,2-0.9,2-2V6C22,4.9,21.1,4,20,4z M20,8l-8,5L4,8V6l8,5l8-5V8z"/>
+                  </svg>
+                  <span>Email：landlord@example.com</span>
+                </div>
+                <div class="contact-info-item">
+                  <svg viewBox="0 0 24 24" width="16" height="16">
+                    <path fill="#666" d="M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.42,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.58,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z"/>
+                  </svg>
+                  <span>Line ID：landlord_123</span>
+                </div>
               </div>
             </div>
           </div>
@@ -223,6 +252,7 @@
         </div>
 
         <div class="maintenance-history">
+          <!-- 已解決的報修項目 -->
           <div class="maintenance-item">
             <div class="maintenance-status resolved">已解決</div>
             <div class="maintenance-header">
@@ -233,12 +263,12 @@
               <p>冷氣開機後無法正常製冷，可能是需要添加冷媒。</p>
               <div class="maintenance-photos">
                 <img
-                  src="https://picsum.photos/id/100/100/100"
+                  v-for="(image, index) in ['https://picsum.photos/id/100/800/600', 'https://picsum.photos/id/101/800/600']"
+                  :key="index"
+                  :src="image.replace('/800/600', '/100/100')"
                   alt="故障照片"
-                />
-                <img
-                  src="https://picsum.photos/id/101/100/100"
-                  alt="故障照片"
+                  @click="openImagePreview(image)"
+                  class="maintenance-photo"
                 />
               </div>
             </div>
@@ -252,6 +282,7 @@
             </div>
           </div>
 
+          <!-- 處理中的報修項目 -->
           <div class="maintenance-item">
             <div class="maintenance-status pending">處理中</div>
             <div class="maintenance-header">
@@ -262,8 +293,12 @@
               <p>浴室排水口排水緩慢，洗澡時容易積水。</p>
               <div class="maintenance-photos">
                 <img
-                  src="https://picsum.photos/id/102/100/100"
+                  v-for="(image, index) in ['https://picsum.photos/id/102/800/600']"
+                  :key="index"
+                  :src="image.replace('/800/600', '/100/100')"
                   alt="故障照片"
+                  @click="openImagePreview(image)"
+                  class="maintenance-photo"
                 />
               </div>
             </div>
@@ -272,7 +307,23 @@
               <p>已記錄，將於近日安排水電師傅查看。</p>
             </div>
           </div>
+
+          <!-- 新增報修按鈕 -->
+          <button class="add-maintenance-btn">
+            <span class="plus-icon">+</span>
+            新增報修申請
+          </button>
         </div>
+
+        <!-- 照片預覽模態視窗 -->
+        <Transition name="modal">
+          <div v-if="showImagePreview" class="image-preview-modal" @click="closeImagePreview">
+            <div class="preview-content" @click.stop>
+              <img :src="selectedImage" alt="報修照片預覽" class="preview-image">
+              <button class="close-preview" @click="closeImagePreview">&times;</button>
+            </div>
+          </div>
+        </Transition>
       </div>
 
       <!-- 我的發布 -->
@@ -646,6 +697,7 @@
   import PasswordChangeModal from "@/components/profile/PasswordChangeModal.vue";
   import ForgotPasswordModal from "@/components/profile/ForgotPasswordModal.vue";
   import ChatRoom from "@/components/ChatRoom.vue";
+  import Swal from "sweetalert2";
 
   export default {
     name: "ProfilePage",
@@ -676,6 +728,18 @@
       const showEmailVerificationModal = ref(false);
       const showPhoneVerificationModal = ref(false);
 
+      const showImagePreview = ref(false);
+      const selectedImage = ref('');
+      
+      const openImagePreview = (image) => {
+        selectedImage.value = image;
+        showImagePreview.value = true;
+      };
+      
+      const closeImagePreview = () => {
+        showImagePreview.value = false;
+      };
+
       const isProcessingPortal = ref(false);
 
       const fileInput = ref(null);
@@ -685,6 +749,8 @@
       const user = computed(() => store.getters["user/currentUser"]);
       const isAdmin = computed(() => store.getters["user/isAdmin"]);
       const avatarUrl = computed(() => store.getters["user/avatarUrl"]);
+
+      const showContactModal = ref(false);
 
       const fetchUserData = async () => {
         try {
@@ -988,14 +1054,36 @@
         showPasswordModal.value = false;
       };
 
-      const handleLogout = async () => {
-        try {
-          router.push("/login");
-          await store.dispatch("user/logout");
-        } catch (error) {
-          console.error("登出失敗:", error);
-        }
+      const confirmLogout = () => {
+        Swal.fire({
+          title: '確定要登出嗎？',
+          text: '您將被重新導向到登入頁面',
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonColor: '#3085d6',
+          cancelButtonColor: '#d33',
+          confirmButtonText: '是，我要登出',
+          cancelButtonText: '取消'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            handleLogout();
+            Swal.fire(
+              '已登出',
+              '您已成功登出系統',
+              'success'
+            );
+          }
+        });
       };
+
+  const handleLogout = async () => {
+    try {
+      router.push("/login");
+      await store.dispatch("user/logout");
+    } catch (error) {
+      console.error("登出失敗:", error);
+    }
+  };
 
       const goToLogin = () => {
         router.push("/login");
@@ -1047,6 +1135,12 @@
         handleShowPhoneChange,
         handleShowPasswordChange,
         handleLogout,
+        confirmLogout,
+        showContactModal,
+        showImagePreview,
+        selectedImage,
+        openImagePreview,
+        closeImagePreview,
       };
     },
   };
@@ -1107,6 +1201,96 @@
   i {
     color: black;
   }
+
+  .modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-container {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.2rem;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  transition: color 0.2s ease;
+}
+
+.modal-close:hover {
+  color: #333;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.contact-info-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  transition: background-color 0.2s ease;
+}
+
+.contact-info-item:hover {
+  background: #f0f0f0;
+}
+
+.contact-info-item:last-child {
+  margin-bottom: 0;
+}
+
+/* 動畫效果 */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
   .profile-info {
     flex: 1;
@@ -1319,6 +1503,214 @@
     background-color: #007bff;
   }
 
+  /* 報修紀錄樣式優化 */
+.maintenance-history {
+  margin-top: 20px;
+  margin-bottom: 40px;
+}
+
+.maintenance-item {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  margin-bottom: 20px;
+  padding: 20px;
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.maintenance-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.maintenance-status {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.maintenance-status.resolved {
+  background-color: #d1fae5;
+  color: #047857;
+}
+
+.maintenance-status.pending {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+
+.maintenance-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #f3f4f6;
+  padding-right: 90px; /* 為狀態標籤留出空間 */
+}
+
+.maintenance-header h3 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 1.1rem;
+}
+
+.maintenance-date {
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.maintenance-details p {
+  color: #4b5563;
+  margin-bottom: 15px;
+  line-height: 1.6;
+}
+
+.maintenance-photos {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 5px 0 15px 0;
+}
+
+.maintenance-photo {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 2px solid #f3f4f6;
+}
+
+.maintenance-photo:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #e5e7eb;
+}
+
+.response-header, .resolution-header {
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.maintenance-response, .maintenance-resolution {
+  background: #f9fafb;
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 15px;
+}
+
+.maintenance-resolution {
+  background: #f0f9ff;
+}
+
+/* 新增報修按鈕 */
+.add-maintenance-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  color: #4b5563;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.add-maintenance-btn:hover {
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  transform: translateY(-2px);
+}
+
+.plus-icon {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+/* 圖片預覽模態框 */
+.image-preview-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.preview-content {
+  position: relative;
+  max-width: 90%;
+  max-height: 90vh;
+}
+
+.preview-image {
+  max-width: 100%;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.close-preview {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 32px;
+  cursor: pointer;
+  padding: 10px;
+  transition: transform 0.2s ease;
+}
+
+.close-preview:hover {
+  transform: rotate(90deg);
+}
+
+/* 模態框動畫 */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-enter-active .preview-content,
+.modal-leave-active .preview-content {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.modal-enter-from {
+  opacity: 0;
+}
+
+.modal-enter-from .preview-content {
+  transform: scale(0.8);
+  opacity: 0;
+}
+
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-leave-to .preview-content {
+  transform: scale(0.8);
+  opacity: 0;
+}
+
   /* 我的租屋資訊 */
   .housing-info {
     padding: 30px;
@@ -1460,6 +1852,9 @@
     border: none;
     border-radius: 6px;
     cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
   }
 
   /* 租屋操作按鈕樣式優化 */
@@ -1468,6 +1863,39 @@
   grid-template-columns: repeat(4, 1fr);
   gap: 15px;
   padding: 20px 0;
+}
+
+/* 懸浮效果 */
+.contact-btn:hover {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
+}
+
+/* 點擊效果 */
+.contact-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 123, 255, 0.1);
+  background-color: #0050a6;
+}
+
+/* 添加漣漪效果 */
+.contact-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.3s, height 0.3s;
+}
+
+.contact-btn:active::after {
+  width: 200px;
+  height: 200px;
 }
 
 .action-btn {
