@@ -71,7 +71,7 @@
           </div>
         </div>
       </div>
-      <button class="logout-btn" @click="handleLogout">
+      <button class="logout-btn" @click="confirmLogout">
         <span class="material-symbols-outlined"> logout </span>登出
       </button>
       <button
@@ -646,6 +646,7 @@
   import PasswordChangeModal from "@/components/profile/PasswordChangeModal.vue";
   import ForgotPasswordModal from "@/components/profile/ForgotPasswordModal.vue";
   import ChatRoom from "@/components/ChatRoom.vue";
+  import Swal from "sweetalert2";
 
   export default {
     name: "ProfilePage",
@@ -988,14 +989,36 @@
         showPasswordModal.value = false;
       };
 
-      const handleLogout = async () => {
-        try {
-          router.push("/login");
-          await store.dispatch("user/logout");
-        } catch (error) {
-          console.error("登出失敗:", error);
-        }
+      const confirmLogout = () => {
+        Swal.fire({
+          title: '確定要登出嗎？',
+          text: '您將被重新導向到登入頁面',
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonColor: '#3085d6',
+          cancelButtonColor: '#d33',
+          confirmButtonText: '是，我要登出',
+          cancelButtonText: '取消'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            handleLogout();
+            Swal.fire(
+              '已登出',
+              '您已成功登出系統',
+              'success'
+            );
+          }
+        });
       };
+
+  const handleLogout = async () => {
+    try {
+      router.push("/login");
+      await store.dispatch("user/logout");
+    } catch (error) {
+      console.error("登出失敗:", error);
+    }
+  };
 
       const goToLogin = () => {
         router.push("/login");
@@ -1047,6 +1070,7 @@
         handleShowPhoneChange,
         handleShowPasswordChange,
         handleLogout,
+        confirmLogout,
       };
     },
   };
